@@ -7,8 +7,10 @@ from app.core.security import create_access_token, get_current_user
 from app.models.user import User
 from datetime import timedelta
 from app.core.config import settings
+from app.core.logger import get_logger
 
 router = APIRouter()
+logger = get_logger(service="auth")
 
 @router.post("/register",response_model = UserResponse)
 async def register(user: UserCreate,db: AsyncSession = Depends(get_db))-> User:

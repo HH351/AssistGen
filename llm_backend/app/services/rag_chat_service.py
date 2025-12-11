@@ -20,7 +20,7 @@ class RAGChatService:
         # 添加结构化输出的提示模板
         self.structured_prompt = """
 
-        基于以下文档内容回答用户的问题：
+        基于以下文档内容用中文回答用户的问题,只需用简要中文回答，不要返回原文档内容：
 
         {context}
 
@@ -82,6 +82,7 @@ class RAGChatService:
                             "content": prompt
                         }
                     ]
+                    logger.info(f"Constructed RAG messages with context for query: {user_query}")
                 else:
                     # 返回空检索结果
                     yield json.dumps({
@@ -89,7 +90,7 @@ class RAGChatService:
                         "total": 0,
                         "results": []
                     }, ensure_ascii=False) + "\n\n"
-                    
+                    logger.info(f"No relevant documents found for query: {user_query}") 
                     yield "未找到相关的文档内容。将基于通用知识回答：\n\n"
                     rag_messages = messages
 

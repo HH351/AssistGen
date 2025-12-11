@@ -21,7 +21,8 @@ class UserService:
             )
         )
         result = await self.db.execute(query)
-        existing_user = result.scalars_one_or_none()
+        existing_user = result.scalar_one_or_none()
+        logger.info(f"Checking existing user for username: {user_create.username}, email: {user_create.email}")
         if existing_user:
             if existing_user.username == user_create.username:
                 raise ValueError("该用户名已经被注册！")
@@ -32,7 +33,7 @@ class UserService:
         new_user = User(
             username=user_create.username,
             email=user_create.email,
-            hashed_password=get_password_hash(user_create.password)
+            password_hash=get_password_hash(user_create.password)
         )
         self.db.add(new_user)
         await self.db.commit()
@@ -55,14 +56,17 @@ class UserService:
         query = select(User).where(User.email == email)
         result = await self.db.execute(query)
         user = result.scalar_one_or_none()  # 获取查询结果中的第一个用户，如果存在则返回，否则返回 None
-        
+        logger.info(f"Authenticating user with email: {email}")
         if not user:
             logger.warning(f"User not found: {email}")
             return None
-            
+
         if not verify_password(password, user.password_hash):
             logger.warning(f"Invalid password for user: {email}")
+            
+            print("验证失败")
             return None
+        return user
         
     async def get_user_by_username(self,username:str) -> Optional[User]:
         """通过用户名获取用户"""

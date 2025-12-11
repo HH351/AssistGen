@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str
     OLLAMA_CHAT_MODEL: str
     OLLAMA_REASON_MODEL: str
+    OLLAMA_EMBEDDING_MODEL : str = "bge-m3"  # Ollama embedding模型名称
+
     
     # Service selection
     CHAT_SERVICE: ServiceType = ServiceType.DEEPSEEK
@@ -34,16 +36,45 @@ class Settings(BaseSettings):
     
     # Search settings
     SERPAPI_KEY: str
+    SEARCH_RESULT_COUNT: int = 3
+
+    # JWT settings
+    SECRET_KEY: str = "your-secret-key"  # 在生产环境中使用安全的密钥
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    # Redis settings
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: str = ""
+    REDIS_CACHE_EXPIRE: int = 3600
+    REDIS_CACHE_THRESHOLD: float = 0.8
+    
+    
+
+
+
+    # Embedding settings 
+    EMBEDDING_TYPE: str = "ollama"  # ollama 或 sentence_transformer
+    EMBEDDING_MODEL: str = "bge-m3"  # ollama embedding模型
+    EMBEDDING_THRESHOLD: float = 0.90  # 语义相似度阈值
 
     # 构建数据库连接字符串
     @property
     def DATABASE_URL(self) -> str:
         return f"mysql+aiomysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
+    #https://liaoxuefeng.com/books/python/oop-adv/property/index.html
+    #把方法变为属性的装饰器
+    @property
+    def REDIS_URL(self) -> str:
+        """构建Redis URL"""
+        auth = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
+        return f"redis://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+    
     class Config:
-        env_file = ".env"
+        env_file = str(ENV_FILE)  # 使用绝对路径
         env_file_encoding = "utf-8"
         case_sensitive = True
 

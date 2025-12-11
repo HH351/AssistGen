@@ -1,20 +1,25 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File,Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Dict
 from app.services.llm_factory import LLMFactory
 from app.services.search_service import SearchService
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime
 from pathlib import Path
 from app.services.rag_service import RAGService
 from app.services.rag_chat_service import RAGChatService
+from app.services.conversation_service import ConversationService
 from app.core.logger import get_logger, log_structured
 from app.core.middleware import LoggingMiddleware
 from app.core.config import settings
+from app.core.database import AsyncSessionLocal, get_db
 from app.api import api_router
+from app.services.conversation_service import ConversationService
+
 
 
 # 配置上传目录 - RAG 功能的
@@ -46,35 +51,52 @@ app.include_router(api_router, prefix="/api")
 class ReasonRequest(BaseModel):
     messages: List[Dict[str, str]]
 
+
 class ChatMessage(BaseModel):
     messages: List[Dict[str, str]]
+    user_id: int
+    conversation_id: int  # 添加会话ID字段
 
 class RAGChatRequest(BaseModel):
     messages: List[Dict[str, str]]
     index_id: str
 
-@app.post("/chat")
-async def chat_endpoint(request: ChatMessage):
+
+class CreateConversationRequest(BaseModel):
+    user_id: int
+
+@app.post("/api/conversations")
+async def create_conversation(request: CreateConversationRequest, db: AsyncSession = Depends(get_db)):
+    """创建新会话"""
+    try:
+        service = ConversationService(db)
+        conversation_id = await service.create_conversation(request.user_id)
+        logger.info(f"New conversation {conversation_id} created for user {request.user_id}")
+        return {"conversation_id": conversation_id}
+    except Exception as e:
+        logger.error(f"Error creating conversation: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat")
+async def chat_endpoint(request: ChatMessage, db: AsyncSession = Depends(get_db)):
     """聊天接口"""
     try:
-        logger.info("Processing chat request")
+        logger.info(f"Processing chat request for user {request.user_id} in conversation {request.conversation_id}")
         chat_service = LLMFactory.create_chat_service()
+        conversation_service = ConversationService(db)
         
-        log_structured("chat_request", {
-            "message_count": len(request.messages),
-            "last_message": request.messages[-1]["content"][:100] + "..."
-        })
-        
-        # 默认情况下， FastAPI使用JSONResponse返回响应。
-        # 要返回流式响应，请使用StreamingResponse: 将生成器函数传递给StreamingResponse ，然后将其返回。
-        # FastAPI 官方详细文档：https://fastapi.tiangolo.com/advanced/custom-response/#redirectresponse
         return StreamingResponse(
-            chat_service.generate_stream(request.messages),
+            chat_service.generate_stream(
+                messages=request.messages,
+                user_id=request.user_id,
+                conversation_id=request.conversation_id,
+                on_complete=conversation_service.save_message
+            ),
             media_type="text/event-stream"
         )
     
     except Exception as e:
-        logger.error(f"Chat error: {str(e)}", exc_info=True)  # exc_info=True 用于在记录错误时提供详细的错误信息
+        logger.error(f"Chat error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/reason")
@@ -110,7 +132,6 @@ async def search_endpoint(request: ChatMessage):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -184,10 +205,35 @@ async def rag_chat_endpoint(request: RAGChatRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+
+
+@app.get("/api/conversations/user/{user_id}")
+async def get_user_conversations(user_id: int, db: AsyncSession = Depends(get_db)):
+    """获取用户的所有会话"""
+    try:
+        service = ConversationService(db)
+        conversations = await service.get_user_conversations(user_id)
+        return conversations
+    except Exception as e:
+        logger.error(f"Error getting conversations: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/conversations/{conversation_id}/messages")
+async def get_conversation_messages(conversation_id: int, user_id: int, db: AsyncSession = Depends(get_db)):
+    """获取会话的所有消息"""
+    try:
+        service = ConversationService(db)
+        messages = await service.get_conversation_messages(conversation_id, user_id)
+        return messages
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error getting messages: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 # 最后挂载静态文件，并确保使用绝对路径
 STATIC_DIR = Path(__file__).parent / "static" / "dist"

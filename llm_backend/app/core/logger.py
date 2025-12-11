@@ -40,7 +40,7 @@ def get_logger(service: str):
     """获取带有服务名称的 logger"""
     return logger.bind(service=service)
 
-def log_structed(event_type:str,data:dict):
+def log_structured(event_type:str,data:dict):
     """记录结构化日志"""
     log_entry = {
         "event_type": event_type,

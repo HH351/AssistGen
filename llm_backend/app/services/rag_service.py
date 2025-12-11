@@ -7,6 +7,8 @@ import PyPDF2
 from docx import Document
 import re
 import os
+from app.core.logger import get_logger
+logger = get_logger(service="rag_service")
 
 class RAGService:
     def __init__(self):
@@ -62,7 +64,7 @@ class RAGService:
                 file_info["path"],
                 str(self.indexes_dir)  # 传入 indexes 目录路径
             )
-            
+            logger.info(f"Created embeddings for file {file_info['filename']}: {result}")
             return {
                 "status": "success",
                 "index_id": result["index_id"],

@@ -2,6 +2,8 @@ import uvicorn
 from app.core.logger import get_logger
 import os
 from pathlib import Path
+from scripts.init_db import init_db
+import asyncio
 
 logger = get_logger(service="server")
 
@@ -22,4 +24,5 @@ def start_server():
     )
 
 if __name__ == "__main__":
+    asyncio.run(init_db())
     start_server() 
