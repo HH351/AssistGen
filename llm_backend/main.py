@@ -65,6 +65,9 @@ class RAGChatRequest(BaseModel):
 class CreateConversationRequest(BaseModel):
     user_id: int
 
+class UpdateConversationNameRequest(BaseModel):
+    name: str
+
 @app.post("/api/conversations")
 async def create_conversation(request: CreateConversationRequest, db: AsyncSession = Depends(get_db)):
     """创建新会话"""
@@ -234,6 +237,33 @@ async def get_conversation_messages(conversation_id: int, user_id: int, db: Asyn
     except Exception as e:
         logger.error(f"Error getting messages: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: int):
+    """删除会话及其所有消息"""
+    try:
+        conversation_service = ConversationService()
+        await conversation_service.delete_conversation(conversation_id)
+        return {"message": "会话已删除"}
+    except Exception as e:
+        logger.error(f"删除会话失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/conversations/{conversation_id}/name")
+async def update_conversation_name(
+    conversation_id: int,
+    request: UpdateConversationNameRequest
+):
+    """修改会话名称"""
+    try:
+        conversation_service = ConversationService()
+        await conversation_service.update_conversation_name(conversation_id, request.name)
+        return {"message": "会话名称已更新"}
+    except Exception as e:
+        logger.error(f"更新会话名称失败: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 # 最后挂载静态文件，并确保使用绝对路径
 STATIC_DIR = Path(__file__).parent / "static" / "dist"

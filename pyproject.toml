@@ -6,7 +6,7 @@ authors = [
     {name = "Your Name",email = "you@example.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.14,<3.15"  
+requires-python = ">=3.12,<3.13"  
 dependencies = [
     "uvicorn (>=0.38.0,<0.39.0)",
     "loguru (>=0.7.3,<0.8.0)",
@@ -26,7 +26,11 @@ dependencies = [
     "redis (>=7.1.0,<8.0.0)",
     "aiomysql (>=0.3.2,<0.4.0)",
     "python-docx (>=1.2.0,<2.0.0)",
-    "python-multipart (>=0.0.20,<0.0.21)"
+    "python-multipart (>=0.0.20,<0.0.21)",
+    "langchain (>=1.2.0,<2.0.0)",
+    "langchain-deepseek (>=1.0.1,<2.0.0)",
+    "langchain-ollama (>=1.0.1,<2.0.0)",
+    "graphrag (>=2.7.0,<3.0.0)"
 ]
 
 

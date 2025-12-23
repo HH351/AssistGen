@@ -46,7 +46,7 @@ class DeepseekService:
             start_time = time.time()
             
             # 检查缓存
-            cached_response = None  #await cache.lookup(messages)
+            cached_response = await cache.lookup(messages)
             if cached_response:
                 response_time = time.time() - start_time
                 logger.info(f"Cache hit! Response time: {response_time:.4f} seconds")
@@ -77,7 +77,7 @@ class DeepseekService:
             complete_response = "".join(full_response)
             
             # 更新缓存
-            #await cache.update(messages, complete_response)
+            await cache.update(messages, complete_response)
             
             response_time = time.time() - start_time
             logger.info(f"Cache miss. Response time: {response_time:.4f} seconds")
